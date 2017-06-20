@@ -42,11 +42,11 @@ impl FloatMore for f64 { }
 ///
 /// The rule should be that if `let x: f32`, then `x` and `Complex::new(x, 0.)`
 /// behave the same way under the methods of this trait.
-pub trait ComplexFloat : 
-    Add<Output=Self> + Add<<Self as ComplexFloat>::Real, Output=Self> + 
-    Sub<Output=Self> + Sub<<Self as ComplexFloat>::Real, Output=Self> + 
-    Div<Output=Self> + Div<<Self as ComplexFloat>::Real, Output=Self> + 
-    Mul<Output=Self> + Mul<<Self as ComplexFloat>::Real, Output=Self> + 
+pub trait ComplexFloat :
+    Add<Output=Self> + Add<<Self as ComplexFloat>::Real, Output=Self> +
+    Sub<Output=Self> + Sub<<Self as ComplexFloat>::Real, Output=Self> +
+    Div<Output=Self> + Div<<Self as ComplexFloat>::Real, Output=Self> +
+    Mul<Output=Self> + Mul<<Self as ComplexFloat>::Real, Output=Self> +
     Copy + Zero + One + PartialEq + Display + Debug +
     From<<Self as ComplexFloat>::Real> +
     'static + Send + Sync
@@ -71,6 +71,7 @@ pub trait ComplexFloat :
 
     fn powf(&self, Self::Real) -> Self;
     fn pow(&self, Self) -> Self;
+    fn max() -> Self;
 
     fn sqrt(&self) -> Self;
     fn exp(&self) -> Self;
@@ -134,6 +135,8 @@ macro_rules! float_impl {
             fn powf(&self, exp: Self::Real) -> Self { <$t>::powf(*self, exp) }
             #[inline(always)]
             fn pow(&self, exp: Self) -> Self { <$t>::powf(*self, exp) }
+            #[inline(always)]
+            fn max() -> Self { <$t>::fmax() }
             impl_self_methods!{
                 sqrt, exp, ln,
                 sin, cos, tan,
@@ -173,6 +176,8 @@ macro_rules! complex_impl {
             fn powf(&self, exp: Self::Real) -> Self { self.powf(exp) }
             #[inline(always)]
             fn pow(&self, exp: Self) -> Self { self.powc(exp) }
+            #[inline(always)]
+            fn max() -> Self { Self::new(<$t>::fmax(), <$t>::fmax()) }
             impl_self_methods!{
                 sqrt, exp, ln,
                 sin, cos, tan,
@@ -209,6 +214,22 @@ impl Pi for f32 {
 impl Pi for f64 {
     fn pi() -> Self {
         f64::consts::PI
+    }
+}
+
+trait Max {
+    fn fmax() -> Self;
+}
+
+impl Max for f32 {
+    fn fmax() -> Self {
+        std::f32::MAX
+    }
+}
+
+impl Max for f64 {
+    fn fmax() -> Self {
+        std::f64::MAX
     }
 }
 
@@ -277,7 +298,7 @@ mod tests {
         output(f);
         output(z);
     }
-    
+
     #[test]
     fn arg() {
         for &f in F64S {
@@ -287,7 +308,7 @@ mod tests {
             assert_eq!(c(-f, 0.).arg(), (-f).arg());
         }
     }
-    
+
     #[test]
     fn norm() {
         for &f in F64S {
@@ -296,5 +317,13 @@ mod tests {
             println!("{:?}", -f);
             assert_eq!(c(-f, 0.).norm(), (-f).norm());
         }
+    }
+
+    #[test]
+    fn max() {
+        let maxf64: f64 = ComplexFloat::max();
+        let maxc64: Complex<f64> = ComplexFloat::max();
+        assert_eq!(maxf64, std::f64::MAX);
+        assert_eq!(maxc64, Complex::<f64>::new(std::f64::MAX, std::f64::MAX));
     }
 }
