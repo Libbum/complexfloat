@@ -71,7 +71,7 @@ pub trait ComplexFloat :
 
     fn powf(&self, Self::Real) -> Self;
     fn pow(&self, Self) -> Self;
-    fn max() -> Self;
+    fn fmax() -> Self;
 
     fn sqrt(&self) -> Self;
     fn exp(&self) -> Self;
@@ -136,7 +136,7 @@ macro_rules! float_impl {
             #[inline(always)]
             fn pow(&self, exp: Self) -> Self { <$t>::powf(*self, exp) }
             #[inline(always)]
-            fn max() -> Self { <$t>::fmax() }
+            fn fmax() -> Self { <$t>::max_float() }
             impl_self_methods!{
                 sqrt, exp, ln,
                 sin, cos, tan,
@@ -177,7 +177,7 @@ macro_rules! complex_impl {
             #[inline(always)]
             fn pow(&self, exp: Self) -> Self { self.powc(exp) }
             #[inline(always)]
-            fn max() -> Self { Self::new(<$t>::fmax(), <$t>::fmax()) }
+            fn fmax() -> Self { Self::new(<$t>::max_float(), <$t>::max_float()) }
             impl_self_methods!{
                 sqrt, exp, ln,
                 sin, cos, tan,
@@ -217,18 +217,18 @@ impl Pi for f64 {
     }
 }
 
-trait Max {
-    fn fmax() -> Self;
+trait MaxFloat {
+    fn max_float() -> Self;
 }
 
-impl Max for f32 {
-    fn fmax() -> Self {
+impl MaxFloat for f32 {
+    fn max_float() -> Self {
         std::f32::MAX
     }
 }
 
-impl Max for f64 {
-    fn fmax() -> Self {
+impl MaxFloat for f64 {
+    fn max_float() -> Self {
         std::f64::MAX
     }
 }
