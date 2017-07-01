@@ -77,6 +77,7 @@ pub trait ComplexFloat :
     fn sqrt(&self) -> Self;
     fn exp(&self) -> Self;
     fn ln(&self) -> Self;
+    fn log10(&self) -> Self;
     fn sin(&self) -> Self;
     fn cos(&self) -> Self;
     fn tan(&self) -> Self;
@@ -141,7 +142,7 @@ macro_rules! float_impl {
             #[inline(always)]
             fn fmax() -> Self { <$t>::max_float() }
             impl_self_methods!{
-                sqrt, exp, ln,
+                sqrt, exp, ln, log10,
                 sin, cos, tan,
                 asin, acos, atan,
                 sinh, cosh, tanh,
@@ -183,6 +184,8 @@ macro_rules! complex_impl {
             fn pow(&self, exp: Self) -> Self { self.powc(exp) }
             #[inline(always)]
             fn fmax() -> Self { Self::new(<$t>::max_float(), <$t>::max_float()) }
+            #[inline(always)]
+            fn log10(&self) -> Self { self.ln()/10.0.ln() }
             impl_self_methods!{
                 sqrt, exp, ln,
                 sin, cos, tan,
