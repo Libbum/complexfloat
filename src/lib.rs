@@ -66,6 +66,7 @@ pub trait ComplexFloat :
     /// Return the norm of the number, which is
     /// it magnitue as a complex number
     fn norm(&self) -> Self::Real;
+    fn norm_sqr(&self) -> Self::Real;
     fn conj(&self) -> Self;
     fn arg(&self) -> Self::Real;
 
@@ -128,6 +129,8 @@ macro_rules! float_impl {
             #[inline(always)]
             fn norm(&self) -> $t { <$t>::abs(*self) }
             #[inline(always)]
+            fn norm_sqr(&self) -> $t { <$t>::abs(*self)*<$t>::abs(*self) }
+            #[inline(always)]
             fn conj(&self) -> $t { *self }
             #[inline(always)]
             fn arg(&self) -> $t { if self.is_sign_positive() { 0. } else { <$t>::pi() } }
@@ -168,6 +171,8 @@ macro_rules! complex_impl {
             fn from_real_imag(x: $t, y: $t) -> Self { Self::new(x, y) }
             #[inline(always)]
             fn norm(&self) -> $t { self.norm() }
+            #[inline(always)]
+            fn norm_sqr(&self) -> $t { self.norm_sqr() }
             #[inline(always)]
             fn conj(&self) -> Self { Complex::conj(self) }
             #[inline(always)]
