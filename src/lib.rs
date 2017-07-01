@@ -14,24 +14,29 @@ use num_traits::Float;
 use num_traits::{Zero, One};
 use num_complex::Complex;
 use std::fmt::{Display, Debug, LowerExp, UpperExp};
-use std::ops::{
-    Add, Sub, Mul, Div,
-    AddAssign, SubAssign, MulAssign, DivAssign, RemAssign,
-};
+use std::ops::{Add, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign, RemAssign};
 
 /// An extension of `num::Float` with all properties that f32, f64 have in common
-pub trait FloatMore :
-    Float +
-    Display + Debug + LowerExp + UpperExp +
-    'static +
-    AddAssign + SubAssign + MulAssign + DivAssign + RemAssign +
-    ComplexFloat +
-    Send + Sync +
-    AsPrim
-{ }
+pub trait FloatMore
+    : Float
+    + Display
+    + Debug
+    + LowerExp
+    + UpperExp
+    + 'static
+    + AddAssign
+    + SubAssign
+    + MulAssign
+    + DivAssign
+    + RemAssign
+    + ComplexFloat
+    + Send
+    + Sync
+    + AsPrim {
+}
 
-impl FloatMore for f32 { }
-impl FloatMore for f64 { }
+impl FloatMore for f32 {}
+impl FloatMore for f64 {}
 
 /// A trait for `f32, f64, Complex<f32>, Complex<f64>` together.
 ///
@@ -42,16 +47,27 @@ impl FloatMore for f64 { }
 ///
 /// The rule should be that if `let x: f32`, then `x` and `Complex::new(x, 0.)`
 /// behave the same way under the methods of this trait.
-pub trait ComplexFloat :
-    Add<Output=Self> + Add<<Self as ComplexFloat>::Real, Output=Self> +
-    Sub<Output=Self> + Sub<<Self as ComplexFloat>::Real, Output=Self> +
-    Div<Output=Self> + Div<<Self as ComplexFloat>::Real, Output=Self> +
-    Mul<Output=Self> + Mul<<Self as ComplexFloat>::Real, Output=Self> +
-    Copy + Zero + One + PartialEq + Display + Debug +
-    From<<Self as ComplexFloat>::Real> +
-    'static + Send + Sync
-
-    where <Self as ComplexFloat>::Real: FloatMore
+pub trait ComplexFloat
+    : Add<Output = Self>
+    + Add<<Self as ComplexFloat>::Real, Output = Self>
+    + Sub<Output = Self>
+    + Sub<<Self as ComplexFloat>::Real, Output = Self>
+    + Div<Output = Self>
+    + Div<<Self as ComplexFloat>::Real, Output = Self>
+    + Mul<Output = Self>
+    + Mul<<Self as ComplexFloat>::Real, Output = Self>
+    + Copy
+    + Zero
+    + One
+    + PartialEq
+    + Display
+    + Debug
+    + From<<Self as ComplexFloat>::Real>
+    + 'static
+    + Send
+    + Sync
+where
+    <Self as ComplexFloat>::Real: FloatMore,
 {
     /// Type of the real and imaginary parts (a floating point type).
     type Real;
@@ -72,6 +88,7 @@ pub trait ComplexFloat :
 
     fn powf(&self, Self::Real) -> Self;
     fn pow(&self, Self) -> Self;
+    fn floor(&self) -> Self;
     fn fmax() -> Self;
 
     fn sqrt(&self) -> Self;
@@ -143,7 +160,7 @@ macro_rules! float_impl {
             fn fmax() -> Self { <$t>::max_float() }
             impl_self_methods!{
                 sqrt, exp, ln, log10,
-                sin, cos, tan,
+                sin, cos, tan, floor,
                 asin, acos, atan,
                 sinh, cosh, tanh,
                 asinh, acosh, atanh,
@@ -186,6 +203,8 @@ macro_rules! complex_impl {
             fn fmax() -> Self { Self::new(<$t>::max_float(), <$t>::max_float()) }
             #[inline(always)]
             fn log10(&self) -> Self { self.ln()/10.0.ln() }
+            #[inline(always)]
+            fn floor(&self) -> Self { Self::new(self.re.floor(), self.im.floor()) }
             impl_self_methods!{
                 sqrt, exp, ln,
                 sin, cos, tan,
@@ -247,10 +266,25 @@ mod tests {
     use num_traits::Float;
     use super::*;
     use std::f64;
-    const F64S: &'static [f64] = &[
-        0., 1., f64::consts::PI,
-        f64::INFINITY, f64::MAX, f64::MIN,
-    ];
+    const F64S: &'static [f64] = &[0., 1., f64::consts::PI, f64::INFINITY, f64::MAX, f64::MIN];
+
+    macro_rules! assert_approx_eq {
+    ($a:expr, $b:expr) => ({
+        let eps = 1.0e-6;
+        let (a, b) = (&$a, &$b);
+        assert!((*a - *b).norm() < eps,
+                "assertion failed: `(left !== right)` \
+                           (left: `{:?}`, right: `{:?}`, expect diff: `{:?}`, real diff: `{:?}`)",
+                 *a, *b, eps, (*a - *b).norm());
+    });
+    ($a:expr, $b:expr, $eps:expr) => ({
+        let (a, b) = (&$a, &$b);
+        assert!((*a - *b).norm() < $eps,
+                "assertion failed: `(left !== right)` \
+                           (left: `{:?}`, right: `{:?}`, expect diff: `{:?}`, real diff: `{:?}`)",
+                 *a, *b, $eps, (*a - *b).norm());
+    })
+    }
 
     fn c<F: Float>(x: F, y: F) -> Complex<F> {
         Complex::new(x, y)
@@ -269,16 +303,7 @@ mod tests {
     }
 
     fn arithmetic<F: ComplexFloat>(x: F, y: F::Real) -> F {
-        let results = vec![
-            x + y,
-            x + x,
-            x - y,
-            x - x,
-            x / y,
-            x / x,
-            x * y,
-            x * x,
-        ];
+        let results = vec![x + y, x + x, x - y, x - x, x / y, x / x, x * y, x * x];
         let mut sum = F::zero();
         for elt in &results {
             // addassign is not ready yet..
@@ -326,11 +351,26 @@ mod tests {
             assert_eq!(c(-f, 0.).norm(), (-f).norm());
         }
     }
+    #[test]
+    fn log10() {
+        let a = Complex::new(2., 4.);
+        let b = 2.34234;
+        assert_approx_eq!(a.log10(), Complex::new(0.650514997831991, 0.480828578784234));
+        assert_approx_eq!(b.log10(), 0.369649934889462);
+    }
+
+    #[test]
+    fn floor() {
+        let z = Complex::new(2.23, -3.38);
+        let c = 3498.239;
+        assert_approx_eq!(z.floor(), Complex::new(2., -4.));
+        assert_approx_eq!(c.floor(), 3498.);
+    }
 
     #[test]
     fn max() {
-        let maxf64: f64 = ComplexFloat::max();
-        let maxc64: Complex<f64> = ComplexFloat::max();
+        let maxf64: f64 = ComplexFloat::fmax();
+        let maxc64: Complex<f64> = ComplexFloat::fmax();
         assert_eq!(maxf64, std::f64::MAX);
         assert_eq!(maxc64, Complex::<f64>::new(std::f64::MAX, std::f64::MAX));
     }
