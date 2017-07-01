@@ -91,6 +91,7 @@ where
     fn floor(&self) -> Self;
     fn fmax() -> Self;
 
+    fn low(&self, Self) -> Self;
     fn sqrt(&self) -> Self;
     fn exp(&self) -> Self;
     fn ln(&self) -> Self;
@@ -158,6 +159,8 @@ macro_rules! float_impl {
             fn pow(&self, exp: Self) -> Self { <$t>::powf(*self, exp) }
             #[inline(always)]
             fn fmax() -> Self { <$t>::max_float() }
+            #[inline(always)]
+            fn low(&self, other: Self) -> Self { self.min(other) }
             impl_self_methods!{
                 sqrt, exp, ln, log10,
                 sin, cos, tan, floor,
@@ -205,6 +208,8 @@ macro_rules! complex_impl {
             fn log10(&self) -> Self { self.ln()/10.0.ln() }
             #[inline(always)]
             fn floor(&self) -> Self { Self::new(self.re.floor(), self.im.floor()) }
+            #[inline(always)]
+            fn low(&self, other: Self) -> Self { if self.norm() < other.norm() { *self } else { other } }
             impl_self_methods!{
                 sqrt, exp, ln,
                 sin, cos, tan,
@@ -367,6 +372,15 @@ mod tests {
         assert_approx_eq!(c.floor(), 3498.);
     }
 
+    #[test]
+    fn low() {
+        let a = Complex::new(2.23, -3.38);
+        let b = Complex::new(7.1, 2.9);
+        let c = 39.;
+        let d = 48.;
+        assert_approx_eq!(a.low(b), a);
+        assert_approx_eq!(c.low(d), c);
+    }
     #[test]
     fn max() {
         let maxf64: f64 = ComplexFloat::fmax();
